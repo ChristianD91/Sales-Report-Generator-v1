@@ -22,13 +22,20 @@ Features.
 - Optional Windows 98 retro theme with Comic Sans and bold colors.
 - Fully portable — no installation or admin rights required.
 
-
-Requirements
+Requirements.
 ----------
 
 1- pandas
 2- openpyxl
 3- fpdf
+
+Creating .exe file.
+----------
+
+1. Install PyInstaller: pip install pyinstaller
+2. From terminal, run:
+   pyinstaller --onefile --icon=sales_report_generator.ico app.py
+3. The .exe will appear in the 'dist' folder.
 
 How to Use.
 ----------
