@@ -22,6 +22,14 @@ Features.
 - Optional Windows 98 retro theme with Comic Sans and bold colors.
 - Fully portable — no installation or admin rights required.
 
+
+Requirements
+----------
+
+1- pandas
+2- openpyxl
+3- fpdf
+
 How to Use.
 ----------
 
