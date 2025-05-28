@@ -1,7 +1,6 @@
-import pandas as pd
-import os
-import sys
+from pathlib import Path
 import json
+
 from openpyxl import Workbook
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
@@ -10,35 +9,78 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 import threading
 from fpdf import FPDF
+import pandas as pd
 
 SETTINGS_FILE = "settings.json"
 
+
 # PyInstaller compatibility things
-def resource_path(relative_path):
-    """Get absolute path to resource, works for dev and for PyInstaller."""
-    try:
-        base_path = sys._MEIPASS  # When bundled by PyInstaller
-    except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
+def resource_path(relative_path: str) -> str:
+    """
+    :param relative_path: str; path to resource relative to current working directory
+    Get absolute path to resource, works for dev and for PyInstaller.
+    """
+    base_path = Path(__file__).parent  # When bundled by PyInstaller
+    out_path = base_path / relative_path
+    return out_path
+
 
 # Reporting Logic
-def generate_report(input_path, output_folder, selected_reports, output_format):
-    os.makedirs(output_folder, exist_ok=True)
-    ext = os.path.splitext(input_path)[1].lower()
+def generate_report(
+    input_path: str, output_folder: str, selected_reports: list, output_format: str
+):
+    """
+    :param input_path: str; path to excel file
+    :param output_folder: str; path to output folder
+    :param selected_reports: list; list of reports to generate
+    :param output_format: str; output format
+
+    Required fields:
+    ORDERDATE
+    PRODUCTLINE
+    SALES
+    CUSTOMERNAME
+    COUNTRY
+    """
+    output_folder_path = Path(output_folder)
+    output_folder_path.mkdir(parents=True, exist_ok=True)
+    ext = input_path[input_path.rfind(".") + 1 :].lower()
+
+    def read_csv_data(filename: str):
+        with open(filename, "r") as f:
+            temp = f.readline()
+        first_line = temp[: temp.find("\n")]
+        common_delim = ["\t", ",", "|"]
+        separator = ""
+        no_cols = 1
+        filename = filename
+        for delim in common_delim:
+            sep_ct = first_line.count(delim)
+            if (sep_ct + 1) > no_cols:
+                separator = delim
+                no_cols = sep_ct + 1
+        if no_cols == 1:
+            messagebox.showerror(
+                title="Unknown Delimiter", message="Delimiter cannot be determined"
+            )
+        out_df = pd.read_csv(filename, sep=separator)
+        return out_df
+
     if ext == ".csv":
-        df = pd.read_csv(input_path, encoding='latin1')
+        df = read_csv_data(input_path)
     elif ext in [".xlsx", ".xls"]:
         df = pd.read_excel(input_path)
     else:
-        messagebox.showerror("Invalid File", "Unsupported file format selected.")
+        messagebox.showerror(
+            title="Invalid File", message="Unsupported file format selected."
+        )
         return
 
     df.columns = df.columns.str.strip()
-    total_sales = df['SALES'].sum()
-    df['ORDERDATE'] = pd.to_datetime(df['ORDERDATE'], errors='coerce')
-    df['Month'] = df['ORDERDATE'].dt.to_period('M')
-    df['Quarter'] = df['ORDERDATE'].dt.to_period('Q')
+    total_sales = df["SALES"].sum()
+    df["ORDERDATE"] = pd.to_datetime(df["ORDERDATE"], errors="coerce")
+    df["Month"] = df["ORDERDATE"].dt.to_period("M")
+    df["Quarter"] = df["ORDERDATE"].dt.to_period("Q")
 
     wb = Workbook()
     summary_data = []
@@ -55,7 +97,7 @@ def generate_report(input_path, output_folder, selected_reports, output_format):
                 if col_num == 2 and isinstance(value, (int, float)):
                     cell.number_format = '"$"#,##0.00'
 
-        for i in range(1, len(data_frame.columns)+1):
+        for i in range(1, len(data_frame.columns) + 1):
             ws.column_dimensions[get_column_letter(i)].width = 30
 
         # Optional chart
@@ -65,58 +107,82 @@ def generate_report(input_path, output_folder, selected_reports, output_format):
             chart.y_axis.title = "Sales"
             chart.x_axis.title = data_frame.columns[0]
 
-            data = Reference(ws, min_col=2, min_row=1, max_row=len(data_frame)+1)
-            categories = Reference(ws, min_col=1, min_row=2, max_row=len(data_frame)+1)
+            data = Reference(ws, min_col=2, min_row=1, max_row=len(data_frame) + 1)
+            categories = Reference(
+                ws, min_col=1, min_row=2, max_row=len(data_frame) + 1
+            )
             chart.add_data(data, titles_from_data=True)
             chart.set_categories(categories)
             ws.add_chart(chart, f"E2")
 
-    if 'Top Products' in selected_reports:
-        df_top_products = df.groupby('PRODUCTLINE')['SALES'].sum().sort_values(ascending=False).head(5).reset_index()
-        add_df_to_sheet("Top Products", df_top_products, chart_column='SALES')
+    if "Top Products" in selected_reports:
+        df_top_products = (
+            df.groupby("PRODUCTLINE")["SALES"]
+            .sum()
+            .sort_values(ascending=False)
+            .head(5)
+            .reset_index()
+        )
+        add_df_to_sheet("Top Products", df_top_products, chart_column="SALES")
         summary_data.append(("Top Products", df_top_products))
 
-    if 'Top Customers' in selected_reports:
-        df_top_customers = df.groupby('CUSTOMERNAME')['SALES'].sum().sort_values(ascending=False).head(5).reset_index()
-        add_df_to_sheet("Top Customers", df_top_customers, chart_column='SALES')
+    if "Top Customers" in selected_reports:
+        df_top_customers = (
+            df.groupby("CUSTOMERNAME")["SALES"]
+            .sum()
+            .sort_values(ascending=False)
+            .head(5)
+            .reset_index()
+        )
+        add_df_to_sheet("Top Customers", df_top_customers, chart_column="SALES")
         summary_data.append(("Top Customers", df_top_customers))
 
-    if 'Sales by Country' in selected_reports:
-        df_country = df.groupby('COUNTRY')['SALES'].sum().sort_values(ascending=False).reset_index()
-        add_df_to_sheet("Sales by Country", df_country, chart_column='SALES')
+    if "Sales by Country" in selected_reports:
+        df_country = (
+            df.groupby("COUNTRY")["SALES"]
+            .sum()
+            .sort_values(ascending=False)
+            .reset_index()
+        )
+        add_df_to_sheet("Sales by Country", df_country, chart_column="SALES")
         summary_data.append(("Sales by Country", df_country))
 
-    if 'Sales by Month' in selected_reports:
-        df_month = df.groupby('Month')['SALES'].sum().reset_index()
-        df_month['Month'] = df_month['Month'].astype(str)
-        add_df_to_sheet("Sales by Month", df_month, chart_column='SALES')
+    if "Sales by Month" in selected_reports:
+        df_month = df.groupby("Month")["SALES"].sum().reset_index()
+        df_month["Month"] = df_month["Month"].astype(str)
+        add_df_to_sheet("Sales by Month", df_month, chart_column="SALES")
         summary_data.append(("Sales by Month", df_month))
 
-    if 'Sales by Quarter' in selected_reports:
-        df_quarter = df.groupby('Quarter')['SALES'].sum().reset_index()
-        df_quarter['Quarter'] = df_quarter['Quarter'].astype(str)
-        add_df_to_sheet("Sales by Quarter", df_quarter, chart_column='SALES')
+    if "Sales by Quarter" in selected_reports:
+        df_quarter = df.groupby("Quarter")["SALES"].sum().reset_index()
+        df_quarter["Quarter"] = df_quarter["Quarter"].astype(str)
+        add_df_to_sheet("Sales by Quarter", df_quarter, chart_column="SALES")
         summary_data.append(("Sales by Quarter", df_quarter))
 
-    if 'Sales by Range' in selected_reports:
-        min_sale, max_sale = df['SALES'].min(), df['SALES'].max()
+    if "Sales by Range" in selected_reports:
+        min_sale, max_sale = df["SALES"].min(), df["SALES"].max()
         low_thresh = min_sale + (max_sale - min_sale) / 3
         high_thresh = min_sale + 2 * (max_sale - min_sale) / 3
 
         def range_category(s):
             if s <= low_thresh:
-                return 'Low Range'
+                return "Low Range"
             elif s <= high_thresh:
-                return 'Middle Range'
+                return "Middle Range"
             else:
-                return 'High Range'
+                return "High Range"
 
-        df['Range Category'] = df['SALES'].apply(range_category)
-        df_range = df.groupby('Range Category')['SALES'].sum().reindex(['Low Range', 'Middle Range', 'High Range']).reset_index()
-        add_df_to_sheet("Sales by Range", df_range, chart_column='SALES')
+        df["Range Category"] = df["SALES"].apply(range_category)
+        df_range = (
+            df.groupby("Range Category")["SALES"]
+            .sum()
+            .reindex(["Low Range", "Middle Range", "High Range"])
+            .reset_index()
+        )
+        add_df_to_sheet("Sales by Range", df_range, chart_column="SALES")
         summary_data.append(("Sales by Range", df_range))
 
-    if 'Total Sales Summary' in selected_reports:
+    if "Total Sales Summary" in selected_reports:
         ws = wb.active
         ws.title = "Summary"
         ws["A1"] = "Total Sales"
@@ -126,7 +192,7 @@ def generate_report(input_path, output_folder, selected_reports, output_format):
         ws.column_dimensions["A"].width = 30
         ws.column_dimensions["B"].width = 30
 
-    filename = os.path.join(output_folder, f"sales_summary_report.{output_format}")
+    filename = output_folder_path / f"sales_summary_report.{output_format}"
 
     if output_format == "xlsx":
         wb.save(filename)
@@ -137,27 +203,31 @@ def generate_report(input_path, output_folder, selected_reports, output_format):
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
-        pdf.cell(200, 10, txt="Sales Summary Report", ln=True, align='C')
+        pdf.cell(200, 10, txt="Sales Summary Report", ln=True, align="C")
         for title, data in summary_data:
             pdf.ln(10)
-            pdf.set_font("Arial", 'B', 12)
+            pdf.set_font("Arial", "B", 12)
             pdf.cell(200, 10, title, ln=True)
             pdf.set_font("Arial", size=10)
             for row in data.itertuples(index=False):
-                row_text = ', '.join(str(val) for val in row)
+                row_text = ", ".join(str(val) for val in row)
                 pdf.multi_cell(0, 8, row_text)
         pdf.output(filename)
 
     messagebox.showinfo("Report Generated", f"✅ Report saved to: {filename}")
 
     # Saves previous paths & report selections
-    with open(SETTINGS_FILE, 'w') as f:
-        json.dump({
-            "last_input": input_path,
-            "last_output": output_folder,
-            "last_format": output_format,
-            "last_options": selected_reports
-        }, f)
+    with open(SETTINGS_FILE, "w") as f:
+        json.dump(
+            {
+                "last_input": input_path,
+                "last_output": output_folder,
+                "last_format": output_format,
+                "last_options": selected_reports,
+            },
+            f,
+        )
+
 
 # ---------- GUI ----------
 def launch_gui():
@@ -172,15 +242,20 @@ def launch_gui():
     format_var = tk.StringVar(value="xlsx")
 
     options = [
-        "Top Products", "Top Customers", "Sales by Country",
-        "Sales by Month", "Total Sales Summary", "Sales by Quarter",
-        "Sales by Range"
+        "Top Products",
+        "Top Customers",
+        "Sales by Country",
+        "Sales by Month",
+        "Total Sales Summary",
+        "Sales by Quarter",
+        "Sales by Range",
     ]
     checks = {}
 
-    if os.path.exists(SETTINGS_FILE):
+    settings_file = Path(SETTINGS_FILE)
+    if settings_file.is_file():
         try:
-            with open(SETTINGS_FILE, 'r') as f:
+            with open(SETTINGS_FILE, "r") as f:
                 saved = json.load(f)
                 file_path.set(saved.get("last_input", ""))
                 output_path.set(saved.get("last_output", ""))
@@ -194,18 +269,34 @@ def launch_gui():
 
     tk.Label(top_frame, text="Input File:").grid(row=0, column=0, sticky="w")
     tk.Entry(top_frame, textvariable=file_path, width=35).grid(row=0, column=1)
-    tk.Button(top_frame, text="Browse", command=lambda: file_path.set(filedialog.askopenfilename(filetypes=[("Data Files", "*.csv *.xlsx *.xls")]))).grid(row=0, column=2)
+    tk.Button(
+        top_frame,
+        text="Browse",
+        command=lambda: file_path.set(
+            filedialog.askopenfilename(filetypes=[("Data Files", "*.csv *.xlsx *.xls")])
+        ),
+    ).grid(row=0, column=2)
 
     tk.Label(top_frame, text="Output Folder:").grid(row=1, column=0, sticky="w")
     tk.Entry(top_frame, textvariable=output_path, width=35).grid(row=1, column=1)
-    tk.Button(top_frame, text="Browse", command=lambda: output_path.set(filedialog.askdirectory())).grid(row=1, column=2)
+    tk.Button(
+        top_frame,
+        text="Browse",
+        command=lambda: output_path.set(filedialog.askdirectory()),
+    ).grid(row=1, column=2)
 
     tk.Label(top_frame, text="Output Format:").grid(row=2, column=0, sticky="w")
     format_menu = tk.OptionMenu(top_frame, format_var, "xlsx", "csv", "pdf")
     format_menu.grid(row=2, column=1, sticky="w")
 
     tk.Label(top_frame, text="Theme:").grid(row=3, column=0, sticky="w")
-    theme_menu = tk.OptionMenu(top_frame, theme_var, "Default", "Windows 98", command=lambda _: apply_theme(theme_var.get()))
+    theme_menu = tk.OptionMenu(
+        top_frame,
+        theme_var,
+        "Default",
+        "Windows 98",
+        command=lambda _: apply_theme(theme_var.get()),
+    )
     theme_menu.grid(row=3, column=1, sticky="w")
 
     # Checkbox area
@@ -215,17 +306,34 @@ def launch_gui():
     for i, option in enumerate(options):
         var = tk.BooleanVar(value=True)
         checks[option] = var
-        tk.Checkbutton(checkbox_frame, text=option, variable=var).grid(row=i // 2, column=i % 2, sticky="w")
+        tk.Checkbutton(checkbox_frame, text=option, variable=var).grid(
+            row=i // 2, column=i % 2, sticky="w"
+        )
 
     # Generate Button
     def on_generate():
         selected = [opt for opt, var in checks.items() if var.get()]
         if not file_path.get() or not output_path.get() or not selected:
-            messagebox.showwarning("Missing Info", "Please fill all fields and select options.")
+            messagebox.showwarning(
+                "Missing Info", "Please fill all fields and select options."
+            )
             return
-        threading.Thread(target=generate_report, args=(file_path.get(), output_path.get(), selected, format_var.get()), daemon=True).start()
+        threading.Thread(
+            target=generate_report,
+            args=(file_path.get(), output_path.get(), selected, format_var.get()),
+            daemon=True,
+        ).start()
 
-    tk.Button(window, text="Generate Report", command=on_generate, bg="red", fg="white", font=("Comic Sans MS", 10, "bold"), relief="raised", borderwidth=3).pack(pady=10)
+    tk.Button(
+        window,
+        text="Generate Report",
+        command=on_generate,
+        bg="red",
+        fg="white",
+        font=("Comic Sans MS", 10, "bold"),
+        relief="raised",
+        borderwidth=3,
+    ).pack(pady=10)
 
     def apply_theme(name):
         if name == "Windows 98":
@@ -234,14 +342,31 @@ def launch_gui():
                 f.config(bg="#000080")
                 for child in f.winfo_children():
                     if isinstance(child, tk.Label):
-                        child.config(bg="#000080", fg="#FFFF00", font=("Comic Sans MS", 10, "bold"))
+                        child.config(
+                            bg="#000080",
+                            fg="#FFFF00",
+                            font=("Comic Sans MS", 10, "bold"),
+                        )
                     elif isinstance(child, tk.Entry):
-                        child.config(bg="#FFFF00", fg="#000080", font=("Comic Sans MS", 10, "bold"))
+                        child.config(
+                            bg="#FFFF00",
+                            fg="#000080",
+                            font=("Comic Sans MS", 10, "bold"),
+                        )
                     elif isinstance(child, (tk.Button, tk.OptionMenu)):
-                        child.config(bg="#FF0000", fg="#FFFF00", font=("Comic Sans MS", 10, "bold"))
+                        child.config(
+                            bg="#FF0000",
+                            fg="#FFFF00",
+                            font=("Comic Sans MS", 10, "bold"),
+                        )
             for child in checkbox_frame.winfo_children():
                 if isinstance(child, tk.Checkbutton):
-                    child.config(bg="#000080", fg="#FFFF00", selectcolor="#000080", font=("Comic Sans MS", 9))
+                    child.config(
+                        bg="#000080",
+                        fg="#FFFF00",
+                        selectcolor="#000080",
+                        font=("Comic Sans MS", 9),
+                    )
         else:
             window.config(bg="SystemButtonFace")
             for f in [top_frame, checkbox_frame]:
@@ -257,6 +382,7 @@ def launch_gui():
 
     apply_theme(theme_var.get())
     window.mainloop()
+
 
 if __name__ == "__main__":
     launch_gui()
