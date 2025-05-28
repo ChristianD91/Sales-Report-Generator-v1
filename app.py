@@ -15,7 +15,7 @@ SETTINGS_FILE = "settings.json"
 
 
 # PyInstaller compatibility things
-def resource_path(relative_path: str) -> str:
+def resource_path(relative_path: str) -> str | Path:
     """
     :param relative_path: str; path to resource relative to current working directory
     Get absolute path to resource, works for dev and for PyInstaller.
