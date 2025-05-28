@@ -1,0 +1,7 @@
+# Venv files
+.idea
+
+# Data files
+*.csv
+*.xls
+*.xlsx
