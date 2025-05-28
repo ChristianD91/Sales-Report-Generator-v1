@@ -1,10 +1,12 @@
-Sales Report Generator
-Created by ChristianD91 @ GitHub.
-======================
+# Sales Report Generator
 
+Created by ChristianD91 @ GitHub.
+
+Description
+-----------
 Sales Report Generator is a lightweight, portable desktop application that lets you generate Excel, PDF, or CSV reports from your sales data. No installation is required.
 
-Features.
+Features
 --------
 
 - Supports CSV and Excel (.xls, .xlsx) input files.
@@ -22,14 +24,14 @@ Features.
 - Optional Windows 98 retro theme with Comic Sans and bold colors.
 - Fully portable — no installation or admin rights required.
 
-Requirements.
+Requirements
 ----------
 
 1- pandas
 2- openpyxl
 3- fpdf
 
-Creating .exe file.
+Creating .exe file
 ----------
 
 1. Install PyInstaller: pip install pyinstaller
@@ -37,7 +39,7 @@ Creating .exe file.
    pyinstaller --onefile --icon=sales_report_generator.ico app.py
 3. The .exe will appear in the 'dist' folder.
 
-How to Use.
+How to Use
 ----------
 
 1. Extract the application folder to any location (e.g., C:\MyReports\).
@@ -49,7 +51,7 @@ How to Use.
 7. Click "Generate Report".
 8. Your report will be saved in the selected output folder.
 
-Included Files.
+Included Files
 --------------
 
 - SalesReportGenerator.exe
@@ -57,14 +59,14 @@ Included Files.
 
 Note: settings.json will be created automatically after your first report is generated, retaining your previously selected file paths and the report generation options selected previously.
 
-Portability.
+Portability
 -----------
 
 - No installation required.
 - Self-contained executable.
 - Compatible with Windows 10 and 11 (64-bit).
 
-Themes.
+Themes
 ------
 
 You can switch between:
@@ -72,7 +74,7 @@ You can switch between:
 - Default: Standard system appearance.
 - Windows 98: Retro theme with Comic Sans and colorful interface.
 
-Troubleshooting.
+Troubleshooting
 ---------------
 
 - Ensure your input file includes expected columns like SALES, PRODUCTLINE, CUSTOMERNAME, ORDERDATE, etc.

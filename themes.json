@@ -1,0 +1,92 @@
+{
+  "windows98": {
+    "labels": {
+      "bg": "#000080",
+      "fg": "#FFFF00",
+      "font": {
+        "name": "Comic Sans MS",
+        "size": 10,
+        "mod": "bold"
+      }
+    },
+    "entries": {
+      "bg": "#FFFF00",
+      "fg": "#000080",
+      "font": {
+        "name": "Comic Sans MS",
+        "size": 10,
+        "mod": "bold"
+      }
+    },
+    "buttons": {
+      "bg": "#FF0000",
+      "fg": "#FFFF00",
+      "font": {
+        "name": "Comic Sans MS",
+        "size": 10,
+        "mod": "bold"
+      }
+    },
+    "option_menus": {
+      "bg": "#FF0000",
+      "fg": "#FFFF00",
+      "font": {
+        "name": "Comic Sans MS",
+        "size": 10,
+        "mod": "bold"
+      }
+    },
+    "check_buttons": {
+      "bg": "#000080",
+      "fg": "#FFFF00",
+      "font": {
+        "name": "Comic Sans MS",
+        "size": 9
+      },
+      "selectcolor": "#000080"
+    }
+  },
+  "default": {
+    "labels": {
+      "bg": "SystemButtonFace",
+      "fg": "",
+      "font": {
+        "name": "Arial",
+        "size": 9
+      }
+    },
+    "entries": {
+      "bg": "white",
+      "fg": "black",
+      "font": {
+        "name": "Arial",
+        "size": 9
+      }
+    },
+    "buttons": {
+      "bg": "SystemButtonFace",
+      "fg": "",
+      "font": {
+        "name": "Arial",
+        "size": 9
+      }
+    },
+    "option_menus": {
+      "bg": "SystemButtonFace",
+      "fg": "",
+      "font": {
+        "name": "Arial",
+        "size": 9
+      }
+    },
+    "check_buttons": {
+      "bg": "SystemButtonFace",
+      "fg": "",
+      "font": {
+        "name": "Arial",
+        "size": 9
+      },
+      "selectcolor": "SystemButtonFace"
+    }
+  }
+}
